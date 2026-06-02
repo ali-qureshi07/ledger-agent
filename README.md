@@ -8,26 +8,27 @@
 
 ## The Problem
 
-Small e-commerce founders run their entire financial life across Shopify, Stripe, banks, and a spreadsheet that's always three weeks out of date. Bookkeepers help, but they miss things — duplicate vendor charges, customer concentration risk, silent subscription creep — because they're not looking at the patterns, they're just categorising rows.
+Small e-commerce founders run their financial life across Shopify, Stripe, banks, and a spreadsheet that's always three weeks out of date. Bookkeepers help, but they miss things. Duplicate vendor charges, customer concentration risk, silent subscription creep. Patterns that take vigilance to catch, not just categorisation.
 
-These miss-able problems cost real money. A duplicate £892 charge billed for 3 months is £2,676 quietly gone. A customer that grew to 38% of revenue is a runway-killer waiting to happen.
+These missable problems cost real money. A duplicate £892 ShipBob charge billed for three months is £2,676 quietly gone. A wholesale customer that grew to 22% of revenue is a runway-killer hiding in the data.
 
-A bookkeeper costs £40,000 a year. A CFO costs £150,000. Most small businesses can afford neither.
-
+A bookkeeper costs around £40,000 a year. A part-time CFO is £80,000+. Most small businesses can afford neither.
 ## The Solution
 
-LedgerAgent is an autonomous agent that watches a small business's financial data and surfaces issues before they compound. It does what a vigilant CFO would do — except for £40 a month instead of £150,000 a year.
+LedgerAgent watches a business's financial data and surfaces issues before they compound. Think of it as the vigilant CFO they can't afford, running for £40 a month instead of £80,000 a year.
 
-Ask it *"are there any problems in my finances I should know about?"* and it doesn't just answer. It plans, queries multiple data sources, runs analyses, reasons over the results, and tells you what it found — with concrete numbers and a suggested action.
+Ask it "are there any problems in my finances I should know about?" and it doesn't just answer. It plans a multi-step investigation, queries the data, runs analyses on the results, and tells you what it found, with numbers and a suggested action.
+
+That distinction is the point. A chatbot can't do that. An agent can.
 
 ## How It Works
 
 - **Fivetran** moves data from every source the business uses into a single warehouse, and exposes pipeline operations to the agent through its [MCP server](https://github.com/fivetran/fivetran-mcp).
 - **BigQuery** stores the unified financial picture.
-- **Gemini 3** is the reasoning engine — it plans multi-step investigations, calls tools, and reacts to results.
+- **Gemini 3** is the reasoning engine. It plans multi-step investigations, calls tools, and reacts to results.
 - **Google Cloud Agent Platform** orchestrates the agent loop and hosts it on Cloud Run.
 
-Without Fivetran, the agent has no data. Without Gemini, it can't reason. Without MCP, the agent can't reach Fivetran's operational layer. The integration is the product.
+When the agent finds something worth acting on, it doesn't stop at a recommendation. It can draft and send dispute emails, flag transactions, and trigger pipeline operations on your behalf.
 
 ## Demo
 
@@ -43,26 +44,20 @@ Coming soon — video and live URL by submission deadline.
 
 ## Status
 
-Built for the [Google Cloud Rapid Agent Hackathon](https://rapid-agent.devpost.com/) (Fivetran track). Submission deadline: June 11, 2026.
+Built for the [Google Cloud Rapid Agent Hackathon](https://rapid-agent.devpost.com/), Fivetran track. Submission June 11, 2026.
 
-| Milestone | Status |
-|---|---|
-| GCP + Agent Platform setup | ✅ Done |
-| Fivetran ↔ BigQuery pipeline | ✅ Done |
-| Demo dataset with planted stories | ✅ Done |
-| Agent core capabilities | 🚧 In progress |
-| Frontend with visible reasoning | ⏳ Planned |
-| Deployment + video | ⏳ Planned |
+Done: GCP + Agent Platform setup, Fivetran ↔ BigQuery pipeline, demo dataset with three planted stories the agent should find.
+
+In progress: agent core capabilities, frontend with visible reasoning, Cloud Run deployment, demo video.
 
 ## Why This Matters
 
-There are 5.5 million small businesses in the UK alone. Most are run by founders who never wanted to think about finance and can't afford the humans who do. The financial vigilance that protects large companies — pattern detection, anomaly surfacing, proactive alerts — has historically required an army of accountants and analysts. Agents change that.
+There are 5.5 million small businesses in the UK alone. Most are run by founders who never wanted to think about finance and can't afford the humans who do. The financial vigilance that protects large companies - pattern detection, anomaly surfacing, proactive alerts — has historically required an army of accountants and analysts. Agents change that.
 
-This isn't a chatbot wearing an agent costume. It plans, executes multi-step investigations, calls tools that depend on previous tool results, and produces actions. That distinction is the whole point.
 
 ## Author
 
-Built solo by [Ali Qureshi](https://github.com/ali-qureshi07) — first-year CS student at City University of London, currently building toward fintech and quant-developer roles.
+Built solo by [Ali Qureshi](https://github.com/ali-qureshi07) — first-year CS student at City University of London.
 
 ## License
 
