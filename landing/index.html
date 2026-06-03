@@ -1,0 +1,896 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LedgerAgent — the CFO Maya can finally afford</title>
+<meta name="description" content="An autonomous finance operations agent for small e-commerce businesses. Built with Gemini, Fivetran MCP, and Google Cloud." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,300;1,9..144,400&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+<style>
+  :root {
+    --bg: #faf6ee;
+    --bg-card: #ffffff;
+    --bg-warm: #f3ecdd;
+    --ink: #1c2820;
+    --ink-soft: #4a5848;
+    --ink-mute: #7a8473;
+    --sage: #93a07f;
+    --sage-dark: #5f6e51;
+    --sage-pale: #d9e0cf;
+    --terracotta: #c97b5c;
+    --terracotta-pale: #f0d9cd;
+    --border: #e8e0d0;
+    --border-strong: #d4c9b3;
+    --shadow: 0 1px 2px rgba(28, 40, 32, 0.04), 0 8px 24px rgba(28, 40, 32, 0.04);
+    --shadow-lg: 0 4px 12px rgba(28, 40, 32, 0.06), 0 24px 48px rgba(28, 40, 32, 0.08);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Manrope', system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* Subtle grain texture overlay for warmth */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.4;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.11 0 0 0 0 0.16 0 0 0 0 0.13 0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 28px;
+    position: relative;
+    z-index: 2;
+  }
+
+  /* ---------- Typography helpers ---------- */
+  .serif { font-family: 'Fraunces', Georgia, serif; }
+  .display {
+    font-family: 'Fraunces', Georgia, serif;
+    font-weight: 300;
+    letter-spacing: -0.025em;
+    line-height: 1.05;
+  }
+  .display em { font-style: italic; font-weight: 300; color: var(--sage-dark); }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+
+  .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--sage-dark);
+  }
+
+  a { color: var(--ink); }
+
+  /* ---------- Nav ---------- */
+  nav {
+    padding: 24px 0 0;
+    position: relative;
+    z-index: 10;
+  }
+  .nav-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'Fraunces', Georgia, serif;
+    font-weight: 500;
+    font-size: 19px;
+    letter-spacing: -0.01em;
+  }
+  .brand-mark {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--sage) 0%, var(--sage-dark) 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.3);
+    position: relative;
+  }
+  .brand-mark::after {
+    content: '';
+    position: absolute;
+    inset: 5px;
+    border-radius: 50%;
+    background: var(--bg);
+  }
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .nav-links a { text-decoration: none; color: var(--ink-soft); transition: color 0.15s; }
+  .nav-links a:hover { color: var(--ink); }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 18px;
+    background: var(--ink);
+    color: var(--bg) !important;
+    border-radius: 999px;
+    text-decoration: none !important;
+    font-size: 14px;
+    font-weight: 500;
+    transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+  }
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(28,40,32,0.18); }
+  .btn-light {
+    background: var(--bg-card);
+    color: var(--ink) !important;
+    border: 1px solid var(--border-strong);
+  }
+
+  /* ---------- Hero ---------- */
+  .hero {
+    padding: 96px 0 80px;
+    position: relative;
+  }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 80px;
+    align-items: start;
+  }
+  .hero h1 {
+    font-size: clamp(48px, 6vw, 76px);
+    margin: 24px 0 28px;
+  }
+  .hero-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: var(--sage-pale);
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--sage-dark);
+    letter-spacing: 0.04em;
+  }
+  .hero-tag::before {
+    content: '';
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--sage-dark);
+    box-shadow: 0 0 0 3px rgba(95,110,81,0.18);
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(95,110,81,0.18); }
+    50% { box-shadow: 0 0 0 6px rgba(95,110,81,0); }
+  }
+  .hero p.lead {
+    font-size: 18px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    max-width: 540px;
+    margin: 0 0 36px;
+  }
+  .hero-cta {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  /* Right-side: live snapshot card */
+  .snapshot {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: var(--shadow-lg);
+    position: relative;
+  }
+  .snapshot-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .snapshot-title {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 17px;
+  }
+  .snapshot-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--sage-dark);
+    background: var(--sage-pale);
+    padding: 3px 9px;
+    border-radius: 999px;
+    letter-spacing: 0.04em;
+  }
+  .snapshot-pill::before {
+    content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--sage-dark);
+  }
+  .metric {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .metric:last-child { border-bottom: 0; padding-bottom: 0; }
+  .metric-label {
+    font-size: 13px;
+    color: var(--ink-soft);
+    font-weight: 500;
+  }
+  .metric-value {
+    font-family: 'Fraunces', serif;
+    font-weight: 400;
+    font-size: 22px;
+    letter-spacing: -0.015em;
+  }
+  .metric-value.positive { color: var(--sage-dark); }
+  .metric-value.alert { color: var(--terracotta); }
+  .snapshot-footer {
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--ink-mute);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  /* ---------- Section helpers ---------- */
+  section { padding: 80px 0; position: relative; }
+  .section-head {
+    max-width: 720px;
+    margin-bottom: 56px;
+  }
+  .section-head h2 {
+    font-size: clamp(32px, 4vw, 46px);
+    margin: 16px 0 16px;
+  }
+  .section-head p {
+    font-size: 17px;
+    color: var(--ink-soft);
+    line-height: 1.6;
+    max-width: 600px;
+  }
+
+  /* ---------- Problem section ---------- */
+  .problem {
+    background: var(--bg-warm);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .problem-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 80px;
+    align-items: start;
+  }
+  .problem .quote {
+    font-family: 'Fraunces', serif;
+    font-size: 28px;
+    font-weight: 300;
+    line-height: 1.35;
+    letter-spacing: -0.015em;
+  }
+  .problem .quote em { color: var(--terracotta); font-style: italic; font-weight: 300; }
+  .problem ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .problem li {
+    padding: 18px 0;
+    border-bottom: 1px solid var(--border-strong);
+    display: flex;
+    gap: 18px;
+    align-items: start;
+  }
+  .problem li:first-child { padding-top: 0; }
+  .problem li:last-child { border-bottom: 0; }
+  .problem .num {
+    font-family: 'Fraunces', serif;
+    font-size: 36px;
+    font-weight: 300;
+    line-height: 1;
+    color: var(--terracotta);
+    min-width: 56px;
+  }
+  .problem .num-label {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .problem .num-body {
+    font-size: 14px;
+    color: var(--ink-soft);
+    line-height: 1.55;
+  }
+
+  /* ---------- Demo section (the agent conversation) ---------- */
+  .demo {
+    padding: 96px 0 80px;
+  }
+  .chat {
+    max-width: 760px;
+    margin: 0 auto;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+  }
+  .chat-header {
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--bg-warm);
+  }
+  .chat-avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--sage) 0%, var(--sage-dark) 100%);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--bg);
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 15px;
+  }
+  .chat-meta {
+    flex: 1;
+  }
+  .chat-name {
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .chat-sub {
+    font-size: 12px;
+    color: var(--ink-mute);
+  }
+  .chat-status {
+    font-size: 11px;
+    color: var(--sage-dark);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .chat-body {
+    padding: 28px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .msg-user {
+    align-self: flex-end;
+    max-width: 80%;
+    background: var(--sage-dark);
+    color: var(--bg);
+    padding: 12px 18px;
+    border-radius: 18px 18px 4px 18px;
+    font-size: 14.5px;
+  }
+  .tool-trace {
+    align-self: flex-start;
+    background: var(--bg-warm);
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    width: 100%;
+    max-width: 540px;
+    border-left: 3px solid var(--sage);
+  }
+  .tool-trace .step {
+    padding: 4px 0;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .tool-trace .check {
+    color: var(--sage-dark);
+    font-weight: 700;
+  }
+  .msg-agent {
+    align-self: flex-start;
+    max-width: 90%;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    padding: 18px 20px;
+    border-radius: 4px 18px 18px 18px;
+    font-size: 14.5px;
+    line-height: 1.6;
+  }
+  .msg-agent .finding {
+    display: block;
+    margin-top: 12px;
+    padding: 12px 14px;
+    border-left: 3px solid var(--terracotta);
+    background: var(--terracotta-pale);
+    border-radius: 0 8px 8px 0;
+  }
+  .msg-agent .finding-title {
+    font-weight: 600;
+    color: var(--ink);
+    display: block;
+    margin-bottom: 4px;
+  }
+  .msg-agent .tx-ref {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    background: var(--bg-warm);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
+  /* ---------- Architecture ---------- */
+  .arch {
+    background: var(--ink);
+    color: var(--bg);
+    padding: 96px 0;
+  }
+  .arch .eyebrow { color: var(--sage); }
+  .arch h2 { color: var(--bg); }
+  .arch p { color: rgba(250,246,238,0.7); }
+  .arch-diagram {
+    margin-top: 56px;
+    padding: 40px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 18px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    align-items: stretch;
+  }
+  .arch-box {
+    padding: 24px 22px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(147,160,127,0.25);
+    border-radius: 12px;
+    position: relative;
+  }
+  .arch-box .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--sage);
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+  .arch-box h3 {
+    font-family: 'Fraunces', serif;
+    font-weight: 400;
+    font-size: 19px;
+    margin: 0 0 8px;
+    color: var(--bg);
+  }
+  .arch-box p {
+    font-size: 13.5px;
+    line-height: 1.55;
+    margin: 0;
+    color: rgba(250,246,238,0.65);
+  }
+  .arch-box .pill {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 3px 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    background: rgba(147,160,127,0.15);
+    color: var(--sage);
+    border-radius: 4px;
+  }
+
+  /* ---------- Stats strip ---------- */
+  .stats {
+    padding: 64px 0;
+    border-top: 1px solid var(--border);
+  }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 56px;
+  }
+  .stat-num {
+    font-family: 'Fraunces', serif;
+    font-weight: 300;
+    font-size: 56px;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    color: var(--ink);
+  }
+  .stat-num em { font-style: italic; color: var(--sage-dark); font-weight: 300; }
+  .stat-label {
+    margin-top: 14px;
+    font-size: 14px;
+    color: var(--ink-soft);
+    line-height: 1.5;
+    max-width: 280px;
+  }
+
+  /* ---------- Footer ---------- */
+  footer {
+    padding: 64px 0 48px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-warm);
+  }
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr;
+    gap: 48px;
+    align-items: start;
+  }
+  .footer-tagline {
+    font-family: 'Fraunces', serif;
+    font-size: 19px;
+    font-weight: 400;
+    line-height: 1.4;
+    color: var(--ink);
+    max-width: 320px;
+    margin: 16px 0 0;
+  }
+  .footer-col h4 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--ink-mute);
+    margin: 0 0 14px;
+    font-weight: 600;
+  }
+  .footer-col a {
+    display: block;
+    font-size: 14px;
+    color: var(--ink-soft);
+    text-decoration: none;
+    padding: 4px 0;
+    transition: color 0.15s;
+  }
+  .footer-col a:hover { color: var(--ink); }
+  .footer-bottom {
+    margin-top: 48px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border-strong);
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--ink-mute);
+  }
+
+  /* ---------- Reveal animation ---------- */
+  .reveal {
+    opacity: 0;
+    transform: translateY(12px);
+    animation: reveal 0.9s ease forwards;
+  }
+  .reveal.d1 { animation-delay: 0.05s; }
+  .reveal.d2 { animation-delay: 0.18s; }
+  .reveal.d3 { animation-delay: 0.32s; }
+  .reveal.d4 { animation-delay: 0.46s; }
+  .reveal.d5 { animation-delay: 0.60s; }
+  @keyframes reveal {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 880px) {
+    .hero-grid, .problem-grid, .arch-diagram, .footer-grid, .stats-grid {
+      grid-template-columns: 1fr !important;
+      gap: 40px !important;
+    }
+    .hero { padding: 56px 0 40px; }
+    .section-head h2 { font-size: 32px; }
+    .stat-num { font-size: 44px; }
+    .stats { padding: 48px 0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ NAV ============ -->
+<nav class="wrap">
+  <div class="nav-inner reveal d1">
+    <div class="brand">
+      <span class="brand-mark"></span>
+      <span>LedgerAgent</span>
+    </div>
+    <div class="nav-links">
+      <a href="#how-it-works">How it works</a>
+      <a href="#demo">See it work</a>
+      <a href="https://github.com/ali-qureshi07/ledger-agent" target="_blank" rel="noopener">GitHub</a>
+      <a href="#demo" class="btn">Watch demo →</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ============ HERO ============ -->
+<section class="hero">
+  <div class="wrap">
+    <div class="hero-grid">
+      <div>
+        <span class="hero-tag reveal d1">Built for the Google Cloud Rapid Agent Hackathon · 2026</span>
+        <h1 class="display reveal d2">The CFO Maya can <em>finally</em> afford.</h1>
+        <p class="lead reveal d3">
+          LedgerAgent is an autonomous finance operations agent for small e-commerce
+          businesses. It watches your data across Shopify, Stripe and your bank,
+          catches the issues a bookkeeper would miss, and tells you what to do.
+        </p>
+        <div class="hero-cta reveal d4">
+          <a href="#demo" class="btn">See the agent in action →</a>
+          <a href="#how-it-works" class="btn btn-light">How it works</a>
+        </div>
+      </div>
+
+      <!-- Snapshot card -->
+      <aside class="snapshot reveal d3" aria-label="Live financial snapshot">
+        <div class="snapshot-header">
+          <div>
+            <div class="snapshot-title">Maya's Books · April–May</div>
+            <div class="chat-sub mono" style="font-size:11px;margin-top:2px;">ledger_demo.transactions</div>
+          </div>
+          <span class="snapshot-pill">Pipeline fresh</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Net cash flow</span>
+          <span class="metric-value positive">+£35,494.60</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Inflows</span>
+          <span class="metric-value">£65,757.85</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Outflows</span>
+          <span class="metric-value">−£30,263.25</span>
+        </div>
+        <div class="metric">
+          <span class="metric-label">Issues found</span>
+          <span class="metric-value alert">2</span>
+        </div>
+        <div class="snapshot-footer">
+          <span>60 transactions · 1 connection · last synced just now</span>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PROBLEM ============ -->
+<section class="problem">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">The problem</span>
+      <h2 class="display">The money you lose to <em>things you didn't notice</em>.</h2>
+    </div>
+    <div class="problem-grid">
+      <div>
+        <p class="quote">
+          Small e-commerce founders run their financial life across four tools
+          and a spreadsheet that's <em>always three weeks out of date</em>.
+          Bookkeepers help, but they categorise rows. They don't watch patterns.
+        </p>
+        <p style="color: var(--ink-soft); margin-top: 28px; font-size: 15.5px; line-height: 1.6;">
+          A bookkeeper costs around £40,000 a year. A part-time CFO is £80,000+.
+          Most small businesses can afford neither — and pay for it in money they
+          quietly lose.
+        </p>
+      </div>
+      <ul>
+        <li>
+          <div class="num">01</div>
+          <div>
+            <div class="num-label">Silent duplicate charges</div>
+            <div class="num-body">A vendor bills you twice for the same fulfilment. You don't notice for three months. That's £2,676 quietly gone.</div>
+          </div>
+        </li>
+        <li>
+          <div class="num">02</div>
+          <div>
+            <div class="num-label">Concentration creeping up</div>
+            <div class="num-body">One wholesale customer grows from 8% to 26% of your revenue. You don't see it until they leave.</div>
+          </div>
+        </li>
+        <li>
+          <div class="num">03</div>
+          <div>
+            <div class="num-label">Subscription drift</div>
+            <div class="num-body">Three annual SaaS renewals lump in one week. Easy to miss when each charge looks like just another transaction.</div>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============ DEMO ============ -->
+<section class="demo" id="demo">
+  <div class="wrap">
+    <div class="section-head" style="text-align:center; margin:0 auto 48px;">
+      <span class="eyebrow">See it work</span>
+      <h2 class="display">A real conversation with Maya's books.</h2>
+      <p style="margin: 16px auto 0;">
+        Below is an actual exchange with LedgerAgent. The findings, transaction
+        IDs, and amounts are real — pulled live from BigQuery through a custom
+        MCP server the agent operates.
+      </p>
+    </div>
+
+    <div class="chat">
+      <div class="chat-header">
+        <div class="chat-avatar">L</div>
+        <div class="chat-meta">
+          <div class="chat-name">LedgerAgent</div>
+          <div class="chat-sub">Gemini 3 · 5 MCP tools · BigQuery + Fivetran</div>
+        </div>
+        <div class="chat-status">● Active</div>
+      </div>
+      <div class="chat-body">
+
+        <div class="msg-user">Are there any problems in my finances I should know about?</div>
+
+        <div class="tool-trace">
+          <div class="step"><span class="check">✓</span> Plan: investigate transaction anomalies and revenue concentration</div>
+          <div class="step"><span class="check">✓</span> tool · <strong>query_recent_transactions</strong>(days=60) → 60 rows</div>
+          <div class="step"><span class="check">✓</span> tool · <strong>find_duplicate_transactions</strong>() → 1 pair</div>
+          <div class="step"><span class="check">✓</span> tool · <strong>analyze_revenue_concentration</strong>() → high risk</div>
+        </div>
+
+        <div class="msg-agent">
+          Yes, I found two potential issues you should investigate:
+
+          <span class="finding">
+            <span class="finding-title">1. Suspicious duplicate charge · ShipBob</span>
+            Two identical charges, <strong>£892.40 each</strong>, just 7 days apart.
+            <span class="tx-ref">TX002</span> on April 1 and
+            <span class="tx-ref">TX011</span> on April 8.
+            Normal ShipBob billing is monthly — this is mid-cycle.
+            <em style="display:block;margin-top:8px;color:var(--ink-soft);">Next step: dispute with ShipBob to confirm whether you were double-billed.</em>
+          </span>
+
+          <span class="finding">
+            <span class="finding-title">2. Customer concentration risk · Beauty Box Co</span>
+            While Shopify Payments (44.8%) and Stripe Payments (29.4%) aggregate many small sales,
+            <strong>Beauty Box Co accounts for 25.9% of total revenue (£17,000) from just 2 orders</strong>.
+            This is a significant dependency on a single wholesale client.
+            <em style="display:block;margin-top:8px;color:var(--ink-soft);">Next step: diversify wholesale accounts, or solidify the Beauty Box relationship.</em>
+          </span>
+        </div>
+
+        <div class="msg-user">Before we look at anything else, is my data even fresh?</div>
+
+        <div class="tool-trace">
+          <div class="step"><span class="check">✓</span> tool · <strong>get_pipeline_status</strong>() → 1 connection, last synced 06:56 UTC</div>
+        </div>
+
+        <div class="msg-agent">
+          Yes — your transactions pipeline from Google Sheets last synced automatically
+          this morning at <span class="tx-ref">06:56 UTC</span>. The connection is active and running on schedule.
+          <br><br>
+          If you'd like, I can manually trigger a sync right now to ensure we have up-to-the-minute data
+          before any further analysis. Want me to do that?
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ARCHITECTURE ============ -->
+<section class="arch" id="how-it-works">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="eyebrow">Under the hood</span>
+      <h2 class="display">An agent that <em>operates</em>, not one that just <em>answers</em>.</h2>
+      <p>
+        LedgerAgent isn't a chatbot with a database. It plans multi-step
+        investigations, calls tools, reacts to results, and acts on infrastructure.
+        Built on Google Cloud Agent Platform with a custom MCP server we ship
+        ourselves.
+      </p>
+    </div>
+    <div class="arch-diagram">
+      <div class="arch-box">
+        <div class="label">1 · Data layer</div>
+        <h3>Fivetran → BigQuery</h3>
+        <p>Shopify, Stripe and the bank stream into one warehouse. Fivetran handles the messy plumbing so the agent can focus on patterns.</p>
+        <span class="pill">europe-west2</span>
+      </div>
+      <div class="arch-box">
+        <div class="label">2 · Tool layer</div>
+        <h3>LedgerAgent MCP</h3>
+        <p>A custom Model Context Protocol server with five tools: querying, duplicate detection, concentration analysis, pipeline status, and sync triggers.</p>
+        <span class="pill">Cloud Run · 5 tools</span>
+      </div>
+      <div class="arch-box">
+        <div class="label">3 · Reasoning</div>
+        <h3>Gemini 3 + Agent Platform</h3>
+        <p>The brain. Plans investigations, decides which tools to call, reasons over results, and produces actions — not just answers.</p>
+        <span class="pill">gemini-3.1-pro</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ STATS ============ -->
+<section class="stats">
+  <div class="wrap">
+    <div class="stats-grid">
+      <div>
+        <div class="stat-num"><em>5.5M</em></div>
+        <div class="stat-label">UK small businesses. Most can't afford a CFO. Many can't afford a bookkeeper.</div>
+      </div>
+      <div>
+        <div class="stat-num">£<em>2,676</em></div>
+        <div class="stat-label">Lost to a single duplicate vendor charge over three months. The exact pattern LedgerAgent catches.</div>
+      </div>
+      <div>
+        <div class="stat-num">£<em>40</em>/mo</div>
+        <div class="stat-label">Roughly what an agent costs. Compared to £40,000/year for the human equivalent.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <div class="wrap">
+    <div class="footer-grid">
+      <div>
+        <div class="brand">
+          <span class="brand-mark"></span>
+          <span>LedgerAgent</span>
+        </div>
+        <p class="footer-tagline">The vigilant CFO that small businesses have never been able to afford.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Project</h4>
+        <a href="#how-it-works">How it works</a>
+        <a href="#demo">See it work</a>
+        <a href="https://github.com/ali-qureshi07/ledger-agent" target="_blank" rel="noopener">GitHub repository</a>
+        <a href="https://rapid-agent.devpost.com/" target="_blank" rel="noopener">Hackathon page</a>
+      </div>
+      <div class="footer-col">
+        <h4>Built with</h4>
+        <a href="https://cloud.google.com/agent-builder" target="_blank" rel="noopener">Google Cloud Agent Platform</a>
+        <a href="https://www.fivetran.com/" target="_blank" rel="noopener">Fivetran</a>
+        <a href="https://cloud.google.com/bigquery" target="_blank" rel="noopener">BigQuery</a>
+        <a href="https://modelcontextprotocol.io/" target="_blank" rel="noopener">Model Context Protocol</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>Built solo by Ali Qureshi · Google Cloud Rapid Agent Hackathon · 2026</span>
+      <span>MIT License · Maya is fictional · The data isn't</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
