@@ -570,7 +570,7 @@
     border-color: var(--sage);
     transform: translateY(-1px);
   }
-  .chip:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .chip:disabled { opacity: 0.4; cursor: not-allowed; transform: none; pointer-events: none; }
 
   /* Error message */
   .chat-error {
@@ -1058,7 +1058,7 @@
   // Talks to the LedgerAgent service (FastAPI + ADK) via Server-Sent Events.
   // During local dev this is localhost:8000. Override by setting window.AGENT_URL before this script.
 
-  const AGENT_URL = window.AGENT_URL || 'http://localhost:8000/chat';
+  const AGENT_URL = window.AGENT_URL || 'https://ledger-agent-service-1080957839961.europe-west2.run.app/chat';
 
   const chatBody = document.getElementById('chatBody');
   const chatForm = document.getElementById('chatForm');
@@ -1262,7 +1262,7 @@
   }
 
   // Form submission
-  chatForm.addEventListener('submit', (e) => {
+  chatForm.addEventListener('submit', (e) => { if (isStreaming) return;
     e.preventDefault();
     const text = chatInput.value.trim();
     if (!text) return;
@@ -1271,7 +1271,7 @@
   });
 
   // Prompt chips
-  promptChips.addEventListener('click', (e) => {
+  promptChips.addEventListener('click', (e) => { if (isStreaming) return;
     const chip = e.target.closest('.chip');
     if (!chip) return;
     const prompt = chip.dataset.prompt;
