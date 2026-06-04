@@ -49,3 +49,8 @@ Thumbs.db
 ledger-mcp/.venv/
 ledger-mcp/.env
 ledger-mcp/__pycache__/
+
+# Agent service
+agent-service/.venv/
+agent-service/__pycache__/
+agent-service/.env
