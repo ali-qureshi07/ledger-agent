@@ -8,6 +8,7 @@ import os
 import base64
 
 import httpx
+import resend
 from dotenv import load_dotenv
 from fastmcp import FastMCP
 from google.cloud import bigquery
@@ -20,6 +21,12 @@ FIVETRAN_API_SECRET = os.getenv("FIVETRAN_API_SECRET")
 GCP_PROJECT_ID = os.getenv("GCP_PROJECT_ID")
 BQ_DATASET = os.getenv("BQ_DATASET", "ledger_demo")
 BQ_TABLE = os.getenv("BQ_TABLE", "transactions")
+
+# Email config
+RESEND_API_KEY = os.getenv("RESEND_API_KEY")
+ALLOWED_RECIPIENTS = ["ali.qureshi.3@city.ac.uk"]
+EMAIL_FROM = "LedgerAgent <onboarding@resend.dev>"
+resend.api_key = RESEND_API_KEY
 
 FIVETRAN_BASE_URL = "https://api.fivetran.com"
 TABLE_REF = f"`{GCP_PROJECT_ID}.{BQ_DATASET}.{BQ_TABLE}`"
@@ -251,7 +258,100 @@ def analyze_revenue_concentration() -> dict:
             "small customers; individual large customers are the real concentration concern."
         ),
     }
+@mcp.tool()
+def draft_dispute_email(
+    transaction_ids: list,
+    vendor: str,
+    amount: float,
+    days_apart: int,
+) -> dict:
+    """Draft a dispute email for suspicious duplicate charges. Returns
+    a structured email (to/subject/body) for the user to review before
+    sending. Use this AFTER find_duplicate_transactions surfaces an
+    anomaly worth disputing.
 
+    Args:
+        transaction_ids: List of two transaction IDs (e.g. ["TX002", "TX011"]).
+        vendor: Vendor name (e.g. "ShipBob").
+        amount: Per-charge amount (positive number, e.g. 892.40).
+        days_apart: How many days separate the two charges.
+    """
+    subject = f"Suspected duplicate charge from {vendor} — {' / '.join(transaction_ids)}"
+    body = (
+        f"Hi {vendor} billing team,\n\n"
+        f"I'm writing to flag what appears to be a duplicate charge on my account.\n\n"
+        f"Two transactions for £{amount:.2f} each were billed {days_apart} days apart:\n"
+        f"  • {transaction_ids[0]}\n"
+        f"  • {transaction_ids[1]}\n\n"
+        f"Normal {vendor} billing is monthly, so two identical charges "
+        f"{days_apart} days apart looks like a billing error rather than two "
+        f"distinct fees.\n\n"
+        f"Could you investigate and confirm whether one of these charges "
+        f"should be reversed? I've attached the transaction IDs for reference.\n\n"
+        f"Thanks,\n"
+        f"Maya\n"
+        f"(Drafted automatically by LedgerAgent — review before sending.)"
+    )
+    return {
+        "to_suggested": f"billing@{vendor.lower().replace(' ', '')}.com",
+        "subject": subject,
+        "body": body,
+        "note": (
+            "This is a draft for the user to review. Call send_email next "
+            "ONLY after the user has confirmed they want it sent to their "
+            "verified inbox."
+        ),
+    }
+
+
+@mcp.tool()
+def send_email(to: str, subject: str, body: str) -> dict:
+    """Send the drafted dispute email to the user's verified inbox.
+    For safety, only allow-listed recipients are accepted. The email is
+    delivered to the user's own inbox so they can review and forward to
+    the actual vendor.
+
+    Args:
+        to: Recipient email address. Must be in the allowed list.
+        subject: Email subject line.
+        body: Plain-text email body.
+    """
+    if to not in ALLOWED_RECIPIENTS:
+        return {
+            "success": False,
+            "error": "recipient_not_allowed",
+            "message": (
+                f"Refused to send: '{to}' is not on the verified recipient "
+                f"allowlist. For safety, LedgerAgent only sends drafted "
+                f"emails to verified addresses configured by the operator."
+            ),
+        }
+
+    if not RESEND_API_KEY:
+        return {
+            "success": False,
+            "error": "no_api_key",
+            "message": "Email service is not configured.",
+        }
+
+    try:
+        result = resend.Emails.send({
+            "from": EMAIL_FROM,
+            "to": to,
+            "subject": subject,
+            "text": body,
+        })
+        return {
+            "success": True,
+            "message": f"Email delivered to {to}.",
+            "email_id": result.get("id") if isinstance(result, dict) else None,
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": "send_failed",
+            "message": f"Failed to send: {type(e).__name__}: {str(e)[:200]}",
+        }
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", "8080"))
