@@ -452,6 +452,144 @@
     border-radius: 4px;
   }
 
+  /* Streaming "thinking" indicator */
+  .thinking {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: var(--bg-warm);
+    border-radius: 12px;
+    font-size: 13px;
+    color: var(--ink-soft);
+    font-style: italic;
+  }
+  .thinking .dots {
+    display: inline-flex;
+    gap: 3px;
+  }
+  .thinking .dots span {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--sage-dark);
+    animation: thinking-bounce 1.2s ease-in-out infinite;
+  }
+  .thinking .dots span:nth-child(2) { animation-delay: 0.15s; }
+  .thinking .dots span:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes thinking-bounce {
+    0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+    30% { opacity: 1; transform: translateY(-3px); }
+  }
+
+  /* Live preview hint - shown over static convo */
+  .chat-preview-hint {
+    text-align: center;
+    padding: 14px 24px;
+    margin: 0 22px 16px;
+    background: linear-gradient(180deg, transparent, var(--bg-warm));
+    border-radius: 0 0 12px 12px;
+    font-size: 12.5px;
+    color: var(--ink-mute);
+    font-style: italic;
+    letter-spacing: 0.01em;
+  }
+  .chat-preview-hint::before {
+    content: '↓ ';
+    color: var(--sage-dark);
+    font-style: normal;
+  }
+
+  /* Chat input area */
+  .chat-input-area {
+    border-top: 1px solid var(--border);
+    padding: 16px 18px 20px;
+    background: var(--bg-card);
+  }
+  .chat-input-form {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+  }
+  .chat-input {
+    flex: 1;
+    padding: 11px 16px;
+    border: 1px solid var(--border-strong);
+    border-radius: 10px;
+    background: var(--bg);
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .chat-input:focus {
+    border-color: var(--sage-dark);
+    box-shadow: 0 0 0 3px rgba(95,110,81,0.12);
+  }
+  .chat-input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .chat-send {
+    padding: 0 18px;
+    background: var(--ink);
+    color: var(--bg);
+    border: none;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: transform 0.1s, opacity 0.15s;
+  }
+  .chat-send:hover:not(:disabled) { transform: translateY(-1px); }
+  .chat-send:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Suggested prompt chips */
+  .prompt-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .chip {
+    padding: 7px 13px;
+    background: var(--bg-warm);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-family: inherit;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-weight: 500;
+  }
+  .chip:hover {
+    background: var(--sage-pale);
+    color: var(--ink);
+    border-color: var(--sage);
+    transform: translateY(-1px);
+  }
+  .chip:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  /* Error message */
+  .chat-error {
+    align-self: stretch;
+    padding: 12px 16px;
+    background: var(--terracotta-pale);
+    border-left: 3px solid var(--terracotta);
+    border-radius: 0 8px 8px 0;
+    font-size: 13px;
+    color: var(--ink);
+  }
+  .chat-error code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    background: rgba(255,255,255,0.5);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+
   /* ---------- Architecture ---------- */
   .arch {
     background: var(--ink);
@@ -752,7 +890,7 @@
         </div>
         <div class="chat-status">● Active</div>
       </div>
-      <div class="chat-body">
+      <div class="chat-body" id="chatBody">
 
         <div class="msg-user">Are there any problems in my finances I should know about?</div>
 
@@ -798,6 +936,29 @@
           before any further analysis. Want me to do that?
         </div>
 
+      </div>
+
+      <div class="chat-preview-hint" id="previewHint">
+        Example exchange. Try the real agent below.
+      </div>
+
+      <div class="chat-input-area">
+        <form class="chat-input-form" id="chatForm">
+          <input
+            class="chat-input"
+            id="chatInput"
+            type="text"
+            placeholder="Ask Maya's books anything…"
+            autocomplete="off"
+          />
+          <button class="chat-send" id="chatSend" type="submit">Send</button>
+        </form>
+        <div class="prompt-chips" id="promptChips">
+          <button class="chip" data-prompt="Are there any problems in my finances I should know about?">Find problems</button>
+          <button class="chip" data-prompt="Is my data fresh enough to trust?">Check pipeline</button>
+          <button class="chip" data-prompt="Walk me through my revenue concentration.">Customer concentration</button>
+          <button class="chip" data-prompt="What did I spend the most on recently?">Top expenses</button>
+        </div>
       </div>
     </div>
   </div>
@@ -891,6 +1052,232 @@
     </div>
   </div>
 </footer>
+
+<script>
+  // ============ LIVE CHAT WIRING ============
+  // Talks to the LedgerAgent service (FastAPI + ADK) via Server-Sent Events.
+  // During local dev this is localhost:8000. Override by setting window.AGENT_URL before this script.
+
+  const AGENT_URL = window.AGENT_URL || 'http://localhost:8000/chat';
+
+  const chatBody = document.getElementById('chatBody');
+  const chatForm = document.getElementById('chatForm');
+  const chatInput = document.getElementById('chatInput');
+  const chatSend = document.getElementById('chatSend');
+  const previewHint = document.getElementById('previewHint');
+  const promptChips = document.getElementById('promptChips');
+
+  // Stable session ID per browser tab so the agent maintains conversation state
+  const sessionId = 'web-' + Math.random().toString(36).slice(2, 10);
+
+  let hasInteracted = false;
+  let isStreaming = false;
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
+
+  // Light formatting for agent responses: **bold**, line breaks, and *italics*
+  function formatAgentText(text) {
+    let html = escapeHtml(text);
+    // Bold: **text**
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    // Italic: *text* (but not part of bold)
+    html = html.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>');
+    // Transaction IDs like TX001, TX002
+    html = html.replace(/\b(TX\d{3,})\b/g, '<span class="tx-ref">$1</span>');
+    // £ amounts: £892.40 / £-892.40
+    html = html.replace(/(£-?\d[\d,]*\.?\d*)/g, '<strong>$1</strong>');
+    // Newlines
+    html = html.replace(/\n/g, '<br>');
+    return html;
+  }
+
+  function scrollToBottom() {
+    chatBody.scrollTop = chatBody.scrollHeight;
+    // also keep section in view as content grows
+    chatBody.scrollIntoView({ block: 'end', behavior: 'smooth' });
+  }
+
+  // Clear static convo on first user interaction
+  function goLive() {
+    if (hasInteracted) return;
+    hasInteracted = true;
+    chatBody.innerHTML = '';
+    chatBody.style.maxHeight = '520px';
+    chatBody.style.overflowY = 'auto';
+    if (previewHint) previewHint.remove();
+  }
+
+  function addUserMessage(text) {
+    const el = document.createElement('div');
+    el.className = 'msg-user';
+    el.textContent = text;
+    chatBody.appendChild(el);
+    scrollToBottom();
+    return el;
+  }
+
+  function addThinking() {
+    const el = document.createElement('div');
+    el.className = 'thinking';
+    el.innerHTML = 'Thinking <span class="dots"><span></span><span></span><span></span></span>';
+    chatBody.appendChild(el);
+    scrollToBottom();
+    return el;
+  }
+
+  function addToolTrace() {
+    const el = document.createElement('div');
+    el.className = 'tool-trace';
+    chatBody.appendChild(el);
+    scrollToBottom();
+    return el;
+  }
+
+  function addToolCallStep(traceEl, toolCall) {
+    const step = document.createElement('div');
+    step.className = 'step';
+    step.dataset.tool = toolCall.name;
+    step.innerHTML = `<span class="check" style="opacity:0.3">○</span> tool · <strong>${escapeHtml(toolCall.name)}</strong> <span style="opacity:0.6">running…</span>`;
+    traceEl.appendChild(step);
+    scrollToBottom();
+  }
+
+  function markToolComplete(traceEl, toolName) {
+    const step = traceEl.querySelector(`[data-tool="${toolName}"]`);
+    if (!step) return;
+    step.innerHTML = `<span class="check">✓</span> tool · <strong>${escapeHtml(toolName)}</strong>`;
+  }
+
+  function addAgentMessage(text) {
+    const el = document.createElement('div');
+    el.className = 'msg-agent';
+    el.innerHTML = formatAgentText(text);
+    chatBody.appendChild(el);
+    scrollToBottom();
+    return el;
+  }
+
+  function showError(message) {
+    const el = document.createElement('div');
+    el.className = 'chat-error';
+    el.innerHTML = message;
+    chatBody.appendChild(el);
+    scrollToBottom();
+  }
+
+  function setInputEnabled(enabled) {
+    isStreaming = !enabled;
+    chatInput.disabled = !enabled;
+    chatSend.disabled = !enabled;
+    promptChips.querySelectorAll('.chip').forEach(c => c.disabled = !enabled);
+    if (enabled) chatInput.focus();
+  }
+
+  async function sendMessage(text) {
+    if (isStreaming || !text.trim()) return;
+    goLive();
+    addUserMessage(text);
+    setInputEnabled(false);
+    const thinking = addThinking();
+    let toolTraceEl = null;
+    let agentMessageText = '';
+    let sawAnything = false;
+
+    try {
+      const response = await fetch(AGENT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, session_id: sessionId, user_id: 'maya' }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Server returned ${response.status}`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        // SSE events are separated by blank lines
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop(); // last fragment may be incomplete
+
+        for (const part of parts) {
+          const line = part.trim();
+          if (!line.startsWith('data:')) continue;
+          const payload = line.slice(5).trim();
+          if (payload === '[DONE]') continue;
+
+          let event;
+          try { event = JSON.parse(payload); } catch { continue; }
+
+          // First sign of activity - remove the thinking indicator
+          if (thinking && thinking.parentNode) thinking.remove();
+          sawAnything = true;
+
+          // Tool calls
+          if (event.tool_calls && event.tool_calls.length) {
+            if (!toolTraceEl) toolTraceEl = addToolTrace();
+            event.tool_calls.forEach(tc => addToolCallStep(toolTraceEl, tc));
+          }
+
+          // Tool results
+          if (event.tool_results && event.tool_results.length) {
+            if (toolTraceEl) {
+              event.tool_results.forEach(tr => markToolComplete(toolTraceEl, tr.name));
+            }
+          }
+
+          // Text (usually only in the final event)
+          if (event.text) {
+            agentMessageText += event.text;
+          }
+        }
+      }
+
+      // Render final answer
+      if (agentMessageText) {
+        addAgentMessage(agentMessageText);
+      } else if (!sawAnything) {
+        showError('The agent responded with nothing. Check the agent service logs.');
+      }
+
+    } catch (err) {
+      if (thinking && thinking.parentNode) thinking.remove();
+      showError(
+        `Couldn't reach the agent. Make sure the agent service is running at <code>${escapeHtml(AGENT_URL)}</code>.<br>` +
+        `<span style="opacity:0.7;font-size:12px;">${escapeHtml(err.message)}</span>`
+      );
+    } finally {
+      setInputEnabled(true);
+    }
+  }
+
+  // Form submission
+  chatForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = chatInput.value.trim();
+    if (!text) return;
+    chatInput.value = '';
+    sendMessage(text);
+  });
+
+  // Prompt chips
+  promptChips.addEventListener('click', (e) => {
+    const chip = e.target.closest('.chip');
+    if (!chip) return;
+    const prompt = chip.dataset.prompt;
+    if (prompt) sendMessage(prompt);
+  });
+</script>
 
 </body>
 </html>
