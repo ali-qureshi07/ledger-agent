@@ -451,7 +451,84 @@
     padding: 1px 6px;
     border-radius: 4px;
   }
-
+/* Email card (drafted dispute email) */
+  .email-card {
+    flex-shrink: 0;
+    background: #f7f2e8;
+    border: 1px solid #d6c9a8;
+    border-radius: 12px;
+    margin: 16px 0;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  .email-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: #ede4cf;
+    border-bottom: 1px solid #d6c9a8;
+    font-size: 13px;
+    font-weight: 600;
+    color: #4a5d3a;
+    letter-spacing: 0.02em;
+  }
+  .email-card-header .email-icon { font-size: 16px; }
+  .email-card-body { padding: 16px; }
+  .email-field {
+    display: flex;
+    gap: 12px;
+    padding: 4px 0;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .email-label {
+    color: #6b7a5f;
+    font-weight: 600;
+    min-width: 70px;
+    font-size: 13px;
+  }
+  .email-value { color: #2c2c2c; flex: 1; }
+  .email-body-text {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #e5dcc4;
+    color: #2c2c2c;
+    font-size: 14px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    max-height: 220px;
+    overflow-y: auto;
+  }
+  .email-card-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    padding: 12px 16px;
+    background: #f3ecd9;
+    border-top: 1px solid #d6c9a8;
+  }
+  .email-btn-edit, .email-btn-send {
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    transition: opacity 0.15s;
+  }
+  .email-btn-edit {
+    background: transparent;
+    color: #6b7a5f;
+    border: 1px solid #c4b594;
+  }
+  .email-btn-edit:hover { background: #ede4cf; }
+  .email-btn-send {
+    background: #4a5d3a;
+    color: #f7f2e8;
+  }
+  .email-btn-send:hover { opacity: 0.9; }
   /* Streaming "thinking" indicator */
   .thinking {
     align-self: flex-start;
@@ -1160,7 +1237,43 @@
     scrollToBottom();
     return el;
   }
+  function addEmailCard(emailData, onSend, onEdit) {
+    const card = document.createElement('div');
+    card.className = 'email-card';
 
+    const to = escapeHtml(emailData.to_suggested || 'billing@vendor.com');
+    const subject = escapeHtml(emailData.subject || '');
+    const body = escapeHtml(emailData.body || '');
+
+    card.innerHTML = `
+      <div class="email-card-header">
+        <span class="email-icon">✉</span>
+        <span>Drafted email — review before sending</span>
+      </div>
+      <div class="email-card-body">
+        <div class="email-field">
+          <span class="email-label">To</span>
+          <span class="email-value">${to}</span>
+        </div>
+        <div class="email-field">
+          <span class="email-label">Subject</span>
+          <span class="email-value">${subject}</span>
+        </div>
+        <div class="email-body-text">${body}</div>
+      </div>
+      <div class="email-card-actions">
+        <button class="email-btn-edit" type="button">Edit</button>
+        <button class="email-btn-send" type="button">Send →</button>
+      </div>
+    `;
+
+    card.querySelector('.email-btn-send').addEventListener('click', onSend);
+    card.querySelector('.email-btn-edit').addEventListener('click', onEdit);
+
+    chatBody.appendChild(card);
+    scrollToBottom();
+    return card;
+  }
   function showError(message) {
     const el = document.createElement('div');
     el.className = 'chat-error';
@@ -1185,6 +1298,7 @@
     const thinking = addThinking();
     let toolTraceEl = null;
     let agentMessageText = '';
+    let suppressFinalText = false;
     let sawAnything = false;
 
     try {
@@ -1234,7 +1348,26 @@
             if (toolTraceEl) {
               event.tool_results.forEach(tr => markToolComplete(toolTraceEl, tr.name));
             }
+            // Special handling: render the email card when draft_dispute_email returns
+            event.tool_results.forEach(tr => {
+              const emailData = tr.result && (tr.result.structuredContent || tr.result); if (tr.name === 'draft_dispute_email' && emailData && emailData.subject) {
+                suppressFinalText = true;
+                addEmailCard(
+                  emailData,
+                  () => {
+                    chatInput.value = 'yes';
+                    chatForm.dispatchEvent(new Event('submit'));
+                  },
+                  () => {
+                    chatInput.value = emailData.body || '';
+                    chatInput.focus();
+                    chatInput.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                  }
+                );
+              }
+            });
           }
+          
 
           // Text (usually only in the final event)
           if (event.text) {
@@ -1244,7 +1377,7 @@
       }
 
       // Render final answer
-      if (agentMessageText) {
+      if (agentMessageText && !suppressFinalText) {
         addAgentMessage(agentMessageText);
       } else if (!sawAnything) {
         showError('The agent responded with nothing. Check the agent service logs.');

@@ -145,7 +145,16 @@ async def chat(req: ChatRequest):
                         tool_calls.append({"name": fc.name, "args": dict(fc.args or {})})
                     fr = getattr(part, "function_response", None)
                     if fr:
-                        tool_results.append({"name": fr.name})
+                        fr_data = None
+                        if getattr(fr, "response", None):
+                            try:
+                                fr_data = dict(fr.response)
+                                # ADK often wraps tool return as {"result": {...}}
+                                if isinstance(fr_data.get("result"), dict):
+                                    fr_data = fr_data["result"]
+                            except Exception:
+                                fr_data = None
+                        tool_results.append({"name": fr.name, "result": fr_data})
                 if texts:
                     payload["text"] = "".join(texts)
                 if tool_calls:
