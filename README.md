@@ -24,13 +24,15 @@ LedgerAgent watches a business financial data and surfaces issues before they co
 
 Ask it "are there any problems in my finances I should know about?" and it does not just answer. It plans a multi-step investigation, queries the data, runs analyses on the results, and tells you what it found, with numbers and a suggested action.
 
-That distinction is the point. A chatbot cannot do that. An agent can.
+It does not stop at finding problems. Ask it to draft a dispute email and it produces one. Tell it to send, and a real email lands in your inbox through Resend, ready to forward to the vendor.
 
 ## How It Works
 
 - **Fivetran** moves data from every source the business uses into a single warehouse on a scheduled sync.
 - **BigQuery** stores the unified financial picture (currently `ledger_demo.transactions`).
-- **A custom MCP server** (built solo for this project) exposes five tools to the agent: query, duplicate detection, concentration analysis, pipeline status, and sync triggering. Deployed on Cloud Run.
+- **A custom MCP server** exposes seven tools to the agent: query, duplicate detection, concentration analysis, pipeline status, sync triggering, email drafting, and email sending. Two of those are write operations. Deployed on Cloud Run.
+- **A live dashboard** at the top of the landing page pulls real-time aggregates from BigQuery (revenue, expenses, net, top customer, pipeline status). The agent and the dashboard share the same data.
+- **Email delivery via Resend**, with a hardcoded recipient allowlist so the agent cannot autonomously email anywhere it likes. The agent drafts; the human reviews; the email goes to a verified inbox to forward.
 - **Gemini 3** is the reasoning engine. Wrapped in Google Agent Development Kit, it plans multi-step investigations, calls tools, reacts to results, and decides whether to act.
 - **The agent service** (also Cloud Run) streams reasoning and tool calls back to the browser via Server-Sent Events.
 - **The landing page** (Vercel) wraps it all in a custom chat UI that makes the agent reasoning visible to the user, not hidden behind a black-box response.
@@ -74,7 +76,7 @@ There are 5.5 million small businesses in the UK alone. Most are run by founders
       agent_service.py      Streams agent responses via SSE
       Dockerfile            For Cloud Run deploy
       requirements.txt
-    ledger-mcp/             Custom MCP server (5 tools)
+    ledger-mcp/             Custom MCP server (7 tools)
       server.py             FastMCP, talks to BigQuery + Fivetran
       Dockerfile
       requirements.txt
