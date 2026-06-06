@@ -542,6 +542,93 @@
     color: var(--ink-soft);
     font-style: italic;
   }
+/* Dashboard section */
+  .dashboard {
+    padding: 64px 24px 32px;
+    background: #faf7ef;
+  }
+  .dashboard .wrap {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .dashboard .eyebrow {
+    color: #6b7a5f;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    display: block;
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  .tile-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+  }
+  .tile {
+    background: #f7f2e8;
+    border: 1px solid #e5dcc4;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 140px;
+  }
+  .tile-label {
+    color: #6b7a5f;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .tile-value {
+    color: #2c2c2c;
+    font-size: 28px;
+    font-weight: 600;
+    line-height: 1.1;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    letter-spacing: -0.02em;
+  }
+  .tile-value.positive { color: #4a5d3a; }
+  .tile-value.compact { font-size: 22px; }
+  .tile-subtitle {
+    color: #6b7a5f;
+    font-size: 13px;
+    line-height: 1.4;
+    margin-top: auto;
+  }
+  .tile-risk {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #8a4a2a;
+    font-size: 12px;
+    font-weight: 600;
+    margin-top: 4px;
+  }
+  .pulse-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #4a5d3a;
+    margin-right: 8px;
+    box-shadow: 0 0 0 0 rgba(74, 93, 58, 0.6);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(74, 93, 58, 0.5); }
+    70% { box-shadow: 0 0 0 8px rgba(74, 93, 58, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(74, 93, 58, 0); }
+  }
+  @media (max-width: 900px) {
+    .tile-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 500px) {
+    .tile-grid { grid-template-columns: 1fr; }
+  }
   .thinking .dots {
     display: inline-flex;
     gap: 3px;
@@ -945,6 +1032,41 @@
   </div>
 </section>
 
+<!-- ============ DASHBOARD ============ -->
+<section class="dashboard" id="dashboard">
+  <div class="wrap">
+    <span class="eyebrow">At a glance</span>
+    <div class="tile-grid" id="tile-grid">
+      <div class="tile" data-tile="revenue">
+        <span class="tile-label">Revenue</span>
+        <span class="tile-value" data-field="revenue">—</span>
+        <span class="tile-subtitle" data-field="period">Loading…</span>
+      </div>
+      <div class="tile" data-tile="expenses">
+        <span class="tile-label">Expenses</span>
+        <span class="tile-value" data-field="expenses">—</span>
+        <span class="tile-subtitle" data-field="period2">Loading…</span>
+      </div>
+      <div class="tile" data-tile="net">
+        <span class="tile-label">Net</span>
+        <span class="tile-value positive" data-field="net">—</span>
+        <span class="tile-subtitle" data-field="tx_count">Loading…</span>
+      </div>
+      <div class="tile" data-tile="top-customer">
+        <span class="tile-label">Top customer</span>
+        <span class="tile-value compact" data-field="customer_name">—</span>
+        <span class="tile-subtitle" data-field="customer_pct">Loading…</span>
+        <span class="tile-risk" data-field="customer_risk" style="display:none;">⚠ high concentration</span>
+      </div>
+      <div class="tile" data-tile="pipeline">
+        <span class="tile-label">Data pipeline</span>
+        <span class="tile-value compact"><span class="pulse-dot"></span>Live</span>
+        <span class="tile-subtitle">Fivetran → BigQuery</span>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ============ DEMO ============ -->
 <section class="demo" id="demo">
   <div class="wrap">
@@ -963,7 +1085,7 @@
         <div class="chat-avatar">L</div>
         <div class="chat-meta">
           <div class="chat-name">LedgerAgent</div>
-          <div class="chat-sub">Gemini 3 · 5 MCP tools · BigQuery + Fivetran</div>
+          <div class="chat-sub">Gemini 3 · 7 MCP tools · BigQuery + Fivetran</div>
         </div>
         <div class="chat-status">● Active</div>
       </div>
@@ -1289,7 +1411,53 @@
     promptChips.querySelectorAll('.chip').forEach(c => c.disabled = !enabled);
     if (enabled) chatInput.focus();
   }
+// ============================================================================
+  // Dashboard loader - fetches /dashboard and populates the tiles
+  // ============================================================================
+  async function loadDashboard() {
+    const section = document.getElementById('dashboard');
+    if (!section) return;
 
+    const DASHBOARD_URL = AGENT_URL.replace(/\/chat\/?$/, '') + '/dashboard';
+    try {
+      const resp = await fetch(DASHBOARD_URL);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.json();
+      if (data.status !== 'ok') throw new Error(data.message || 'Bad status');
+
+      const fmt = (n) => '£' + Number(n).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const fmtNet = (n) => (n >= 0 ? '+' : '') + fmt(n);
+
+      const fmtPeriod = (start, end) => {
+        if (!start || !end) return '';
+        const s = new Date(start), e = new Date(end);
+        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        return `${months[s.getMonth()]}–${months[e.getMonth()]} ${e.getFullYear()}`;
+      };
+
+      const periodStr = fmtPeriod(data.period_start, data.period_end);
+
+      section.querySelector('[data-field="revenue"]').textContent = fmt(data.revenue);
+      section.querySelector('[data-field="expenses"]').textContent = fmt(data.expenses);
+      section.querySelector('[data-field="net"]').textContent = fmtNet(data.net);
+      section.querySelector('[data-field="period"]').textContent = periodStr;
+      section.querySelector('[data-field="period2"]').textContent = periodStr;
+      section.querySelector('[data-field="tx_count"]').textContent = `${data.tx_count} transactions`;
+
+      if (data.top_customer) {
+        section.querySelector('[data-field="customer_name"]').textContent = data.top_customer.name;
+        section.querySelector('[data-field="customer_pct"]').textContent = `${data.top_customer.pct_of_revenue}% of revenue`;
+        if (data.top_customer.risk === 'high') {
+          section.querySelector('[data-field="customer_risk"]').style.display = 'inline-flex';
+        }
+      }
+    } catch (err) {
+      console.warn('Dashboard load failed, hiding section:', err);
+      section.style.display = 'none';
+    }
+  }
+
+  loadDashboard();
   async function sendMessage(text) {
     if (isStreaming || !text.trim()) return;
     goLive();

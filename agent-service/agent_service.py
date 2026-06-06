@@ -170,6 +170,84 @@ async def chat(req: ChatRequest):
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 
 
+# ============================================================================
+# Dashboard endpoint - serves landing page metric tiles
+# ============================================================================
+
+from google.cloud import bigquery as _bq
+
+_bq_client = None
+_DASHBOARD_PROJECT = os.getenv("GOOGLE_CLOUD_PROJECT", "project-956bc5d0-62ef-4ef3-8e2")
+_DASHBOARD_TABLE = f"`{_DASHBOARD_PROJECT}.ledger_demo.transactions`"
+
+
+def _get_bq_client():
+    global _bq_client
+    if _bq_client is None:
+        _bq_client = _bq.Client(project=_DASHBOARD_PROJECT)
+    return _bq_client
+
+
+@app.get("/dashboard")
+async def dashboard():
+    """Returns aggregated metrics from BigQuery for the landing page dashboard."""
+    try:
+        client = _get_bq_client()
+
+        # Query 1: revenue, expenses, net, transaction count
+        summary_q = f"""
+        SELECT
+          ROUND(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END), 2) AS revenue,
+          ROUND(ABS(SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END)), 2) AS expenses,
+          ROUND(SUM(amount), 2) AS net,
+          COUNT(*) AS tx_count,
+          MIN(date) AS period_start,
+          MAX(date) AS period_end
+        FROM {_DASHBOARD_TABLE}
+        """
+        summary_row = list(client.query(summary_q).result())[0]
+
+        # Query 2: top revenue source (excluding payment processor payouts)
+        top_customer_q = f"""
+        SELECT
+          REGEXP_REPLACE(description, r' #.*$', '') AS source,
+          ROUND(SUM(amount), 2) AS total_revenue
+        FROM {_DASHBOARD_TABLE}
+        WHERE amount > 0
+          AND LOWER(description) NOT LIKE '%payout%'
+          AND LOWER(description) NOT LIKE '%stripe%'
+          AND LOWER(description) NOT LIKE '%shopify%'
+        GROUP BY source
+        ORDER BY total_revenue DESC
+        LIMIT 1
+        """
+        top_customer_rows = list(client.query(top_customer_q).result())
+        top_customer = None
+        if top_customer_rows:
+            row = top_customer_rows[0]
+            total_revenue = float(summary_row["revenue"]) or 1.0
+            pct = round(100 * float(row["total_revenue"]) / total_revenue, 1)
+            top_customer = {
+                "name": row["source"],
+                "total": float(row["total_revenue"]),
+                "pct_of_revenue": pct,
+                "risk": "high" if pct > 20 else "moderate" if pct > 10 else "low",
+            }
+
+        return {
+            "status": "ok",
+            "revenue": float(summary_row["revenue"]) if summary_row["revenue"] else 0.0,
+            "expenses": float(summary_row["expenses"]) if summary_row["expenses"] else 0.0,
+            "net": float(summary_row["net"]) if summary_row["net"] else 0.0,
+            "tx_count": int(summary_row["tx_count"]) if summary_row["tx_count"] else 0,
+            "period_start": str(summary_row["period_start"]) if summary_row["period_start"] else None,
+            "period_end": str(summary_row["period_end"]) if summary_row["period_end"] else None,
+            "top_customer": top_customer,
+            "pipeline": {"status": "synced", "freshness": "live"},
+        }
+    except Exception as e:
+        return {"status": "error", "message": f"{type(e).__name__}: {str(e)[:200]}"}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
