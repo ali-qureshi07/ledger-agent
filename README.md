@@ -8,7 +8,8 @@
 
 **Live demo →** [ledger-agent-five.vercel.app](https://ledger-agent-five.vercel.app)
 
-![LedgerAgent system architecture](./landing/architecture.svg)
+![LedgerAgent system architecture] <img width="1472" height="692" alt="image" src="https://github.com/user-attachments/assets/c5202689-aefc-4a51-a379-d4d5959500c3" />
+
 
 ## The Problem
 
