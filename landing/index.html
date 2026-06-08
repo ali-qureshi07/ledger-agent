@@ -1076,7 +1076,7 @@
       <p style="margin: 16px auto 0;">
         Below is an actual exchange with LedgerAgent. The findings, transaction
         IDs, and amounts are real — pulled live from BigQuery through a custom
-        MCP server the agent operates.
+        MCP server, with pipeline operations served by Fivetran's official MCP server.
       </p>
     </div>
 
@@ -1085,7 +1085,7 @@
         <div class="chat-avatar">L</div>
         <div class="chat-meta">
           <div class="chat-name">LedgerAgent</div>
-          <div class="chat-sub">Gemini 3 · 7 MCP tools · BigQuery + Fivetran</div>
+          <div class="chat-sub">Gemini 3 · Custom + Fivetran MCP · BigQuery</div>
         </div>
         <div class="chat-status">● Active</div>
       </div>
@@ -1172,8 +1172,9 @@
       <p>
         LedgerAgent isn't a chatbot with a database. It plans multi-step
         investigations, calls tools, reacts to results, and acts on infrastructure.
-        Built on Google Cloud Agent Platform with a custom MCP server we ship
-        ourselves.
+        Built on Google Cloud Agent Platform with two MCP servers: a custom one
+        we ship ourselves for BigQuery analytics and email actions, plus
+        Fivetran's official MCP server vendored from github.com/fivetran/fivetran-mcp.
       </p>
     </div>
     <div class="arch-diagram">
@@ -1186,8 +1187,8 @@
       <div class="arch-box">
         <div class="label">2 · Tool layer</div>
         <h3>LedgerAgent MCP</h3>
-        <p>A custom Model Context Protocol server with five tools: querying, duplicate detection, concentration analysis, pipeline status, and sync triggers.</p>
-        <span class="pill">Cloud Run · 5 tools</span>
+        <p>A custom Model Context Protocol server with seven tools: querying, duplicate detection, concentration analysis, pipeline status, sync triggers, dispute email drafting, and Resend send.</p>
+        <span class="pill">Cloud Run · 7 tools</span>
       </div>
       <div class="arch-box">
         <div class="label">3 · Reasoning</div>
