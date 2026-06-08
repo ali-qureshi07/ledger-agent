@@ -15,6 +15,8 @@ from pydantic import BaseModel
 
 from google.adk.agents import LlmAgent
 from google.adk.tools.mcp_tool.mcp_session_manager import StreamableHTTPConnectionParams
+from google.adk.tools.mcp_tool.mcp_session_manager import StdioConnectionParams
+from mcp import StdioServerParameters
 from google.adk.tools.mcp_tool.mcp_toolset import McpToolset
 from google.adk.runners import InMemoryRunner
 from google.genai import types as genai_types
@@ -26,14 +28,28 @@ MCP_URL = os.getenv(
 
 SYSTEM_INSTRUCTION = """You are LedgerAgent, an autonomous finance operations agent for Maya, who runs a small e-commerce skincare brand on Shopify and Stripe.
 
-You have access to MCP tools that let you:
+You have access to TWO sets of MCP tools.
+
+CUSTOM MCP SERVER (BigQuery analytics + email actions):
 - query_recent_transactions: pull recent transactions from BigQuery
 - find_duplicate_transactions: detect suspicious duplicate charges
 - analyze_revenue_concentration: assess customer concentration risk
-- get_pipeline_status: check if the data pipeline is fresh
-- trigger_sync: refresh the data from Fivetran connections
+- get_pipeline_status: lightweight summary of pipeline freshness (BigQuery side)
+- trigger_sync: legacy alias for refreshing data
 - draft_dispute_email: draft a dispute email for a duplicate charge (returns to/subject/body for user review)
 - send_email: send the drafted email to the user's verified inbox so they can forward it to the vendor
+
+FIVETRAN OFFICIAL MCP SERVER (live pipeline operations via Fivetran's REST API):
+- list_connections / list_connectors: show all Fivetran connections in the account
+- get_connection / get_connector_details: get detailed status of a specific connection
+- list_destinations: show all destinations (e.g. the BigQuery warehouse)
+- list_groups: list account groups
+- (and many other read-only Fivetran tools)
+
+WHEN TO USE WHICH:
+- For questions about the underlying data (transactions, customers, duplicates, revenue): use the custom MCP server tools.
+- For questions specifically about the data pipeline ("is Fivetran working", "when did my Google Sheets connector last sync", "what destinations are configured"): prefer the Fivetran official MCP server tools — they hit Fivetran's live API.
+- For drafting and sending dispute emails: only the custom MCP server has draft_dispute_email and send_email.
 
 EMAIL CAPABILITIES:
 After finding a duplicate charge or other actionable problem, proactively offer to draft a dispute email using draft_dispute_email. After the user reviews the draft and confirms, call send_email.
@@ -66,8 +82,23 @@ async def lifespan(app: FastAPI):
         description="Autonomous finance operations agent for Maya's e-commerce business",
         instruction=SYSTEM_INSTRUCTION,
         tools=[
+            # 1) Custom MCP server (BigQuery analytics, dispute email, Resend send)
             McpToolset(
                 connection_params=StreamableHTTPConnectionParams(url=MCP_URL),
+            ),
+            # 2) Fivetran's official MCP server (read-only Fivetran ops)
+            # Vendored from https://github.com/fivetran/fivetran-mcp
+            McpToolset(
+                connection_params=StdioConnectionParams(
+                    server_params=StdioServerParameters(
+                        command="python",
+                        args=["/app/fivetran-mcp/server.py"],
+                        env={
+                            "FIVETRAN_API_KEY": os.getenv("FIVETRAN_API_KEY", ""),
+                            "FIVETRAN_API_SECRET": os.getenv("FIVETRAN_API_SECRET", ""),
+                        },
+                    ),
+                ),
             ),
         ],
     )

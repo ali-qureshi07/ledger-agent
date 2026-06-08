@@ -12,6 +12,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy app code
 COPY agent_service.py .
+COPY fivetran-mcp/ ./fivetran-mcp/
 
 # Cloud Run injects PORT; default to 8000 locally
 ENV PORT=8000
