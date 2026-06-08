@@ -1178,17 +1178,29 @@
       </p>
     </div>
     <div class="arch-diagram">
+              <div class="label">2 · Tool layer</div>
+        <h3>LedgerAgent MCP</h3>
+        <p>A custom Model Context Protocol server with seven tools: querying, duplicate detection, concentration analysis, pipeline status, sync triggers, dispute email drafting, and Resend send.</p>
+        <span class="pill">Cloud Run · 7 tools</span>
+      </div>
       <div class="arch-box">
+        <div class="label">3 · Reasoning</div><div class="arch-box">
         <div class="label">1 · Data layer</div>
         <h3>Fivetran → BigQuery</h3>
         <p>Shopify, Stripe and the bank stream into one warehouse. Fivetran handles the messy plumbing so the agent can focus on patterns.</p>
         <span class="pill">europe-west2</span>
       </div>
       <div class="arch-box">
-        <div class="label">2 · Tool layer</div>
+        <div class="label">2a · Tool layer (custom)</div>
         <h3>LedgerAgent MCP</h3>
         <p>A custom Model Context Protocol server with seven tools: querying, duplicate detection, concentration analysis, pipeline status, sync triggers, dispute email drafting, and Resend send.</p>
         <span class="pill">Cloud Run · 7 tools</span>
+      </div>
+      <div class="arch-box">
+        <div class="label">2b · Tool layer (partner)</div>
+        <h3>Fivetran Official MCP</h3>
+        <p>Fivetran's open-source MCP server, vendored from github.com/fivetran/fivetran-mcp and run as a stdio subprocess. Exposes live Fivetran operations: list connections, get sync status, inspect destinations.</p>
+        <span class="pill">stdio · Fivetran API</span>
       </div>
       <div class="arch-box">
         <div class="label">3 · Reasoning</div>
